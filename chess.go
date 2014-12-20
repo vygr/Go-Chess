@@ -253,13 +253,14 @@ func piece_moves(brd board, index int, moves moves) <-chan board {
 		for _, move := range moves {
 			dx, dy, length, flag := move.dx, move.dy, move.length, move.flag
 			x, y := cx, cy
+			//special length for pawns so we can adjust for starting 2 hop
 			if length == 0 {
 				if piece == 'p' {
 					length = 1
 					if y == 1 {
 						length = 2
 					}
-				} else if piece == 'P' {
+				} else
 					length = 1
 					if y == 6 {
 						length = 2
@@ -271,36 +272,44 @@ func piece_moves(brd board, index int, moves moves) <-chan board {
 				y += dy
 				length -= 1
 				if (x < 0) || (x >= 8) || (y < 0) || (y >= 8) {
+					//gone off the board
 					break
 				}
 				newindex := y*8 + x
 				newpiece := brd[newindex]
 				newtype := piece_type[newpiece]
 				if newtype == ptype {
+					//hit one of our own piece type (black hit black etc)
 					break
 				}
 				if (flag == no_capture) && (newtype != empty) {
+					//not suposed to capture and not empty square
 					break
 				}
 				if (flag == must_capture) && (newtype == empty) {
+					//must capture and got empty square
 					break
 				}
 				brd[index] = ' '
 				if (y == 0 || y == 7) && (piece == 'P' || piece == 'p') {
+					//try all the pawn promotion possibilities
 					for _, promote_piece := range promote {
 						brd[newindex] = promote_piece
 						yield <- copy_board(brd)
 					}
 				} else {
+					//generate this as a possible move
 					brd[newindex] = piece
 					yield <- copy_board(brd)
 				}
 				brd[index], brd[newindex] = piece, newpiece
 				if (flag == may_capture) && (newtype != empty) {
+					//may capture and we did so !
 					break
 				}
 			}
 		}
+		//close yield channel to break out of 'range' by user of generator
 		close(yield)
 	}()
 	return yield
