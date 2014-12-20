@@ -37,43 +37,43 @@ const (
 	must_capture = 2
 )
 
-type t_board []byte
-type t_boards []t_board
+type board []byte
+type boards []board
 
-type t_vector struct {
+type vector struct {
 	dx     int
 	dy     int
 	length int
 }
-type t_vectors []t_vector
+type vectors []vector
 
-type t_move struct {
+type move struct {
 	dx     int
 	dy     int
 	length int
 	flag   int
 }
-type t_moves []t_move
+type moves []move
 
-type t_test struct {
+type test struct {
 	pieces  []byte
-	vectors t_vectors
+	vectors vectors
 }
-type t_tests []t_test
+type tests []test
 
-type t_score_board struct {
+type score_board struct {
 	score int
-	board t_board
+	board board
 }
-type t_score_boards []t_score_board
+type score_boards []score_board
 
-func (boards t_score_boards) Len() int {
+func (boards score_boards) Len() int {
 	return len(boards)
 }
-func (boards t_score_boards) Swap(i, j int) {
+func (boards score_boards) Swap(i, j int) {
 	boards[i], boards[j] = boards[j], boards[i]
 }
-func (boards t_score_boards) Less(i, j int) bool {
+func (boards score_boards) Less(i, j int) bool {
 	return boards[i].score > boards[j].score
 }
 
@@ -85,49 +85,49 @@ var unicode_pieces = map[byte]string{
 	'p': "♟", 'r': "♜", 'n': "♞", 'b': "♝", 'k': "♚", 'q': "♛",
 	'P': "♙", 'R': "♖", 'N': "♘", 'B': "♗", 'K': "♔", 'Q': "♕", ' ': " "}
 
-var black_pawn_moves = t_moves{
+var black_pawn_moves = moves{
 	{0, 1, 0, no_capture}, {-1, 1, 1, must_capture}, {1, 1, 1, must_capture}}
-var white_pawn_moves = t_moves{
+var white_pawn_moves = moves{
 	{0, -1, 0, no_capture}, {-1, -1, 1, must_capture}, {1, -1, 1, must_capture}}
-var rook_moves = t_moves{
+var rook_moves = moves{
 	{0, -1, 7, may_capture}, {-1, 0, 7, may_capture}, {0, 1, 7, may_capture}, {1, 0, 7, may_capture}}
-var bishop_moves = t_moves{
+var bishop_moves = moves{
 	{-1, -1, 7, may_capture}, {1, 1, 7, may_capture}, {-1, 1, 7, may_capture}, {1, -1, 7, may_capture}}
-var knight_moves = t_moves{
+var knighmoves = moves{
 	{-2, 1, 1, may_capture}, {2, -1, 1, may_capture}, {2, 1, 1, may_capture}, {-2, -1, 1, may_capture},
 	{-1, -2, 1, may_capture}, {-1, 2, 1, may_capture}, {1, -2, 1, may_capture}, {1, 2, 1, may_capture}}
-var queen_moves = t_moves{
+var queen_moves = moves{
 	{0, -1, 7, may_capture}, {-1, 0, 7, may_capture}, {0, 1, 7, may_capture}, {1, 0, 7, may_capture},
 	{-1, -1, 7, may_capture}, {1, 1, 7, may_capture}, {-1, 1, 7, may_capture}, {1, -1, 7, may_capture}}
-var king_moves = t_moves{
+var king_moves = moves{
 	{0, -1, 1, may_capture}, {-1, 0, 1, may_capture}, {0, 1, 1, may_capture}, {1, 0, 1, may_capture},
 	{-1, -1, 1, may_capture}, {1, 1, 1, may_capture}, {-1, 1, 1, may_capture}, {1, -1, 1, may_capture}}
 
-var moves = map[byte]t_moves{
+var moves_map = map[byte]moves{
 	'p': black_pawn_moves, 'P': white_pawn_moves, 'R': rook_moves, 'r': rook_moves,
-	'B': bishop_moves, 'b': bishop_moves, 'N': knight_moves, 'n': knight_moves,
+	'B': bishop_moves, 'b': bishop_moves, 'N': knighmoves, 'n': knighmoves,
 	'Q': queen_moves, 'q': queen_moves, 'K': king_moves, 'k': king_moves}
 
-var black_pawn_vectors = t_vectors{
+var black_pawn_vectors = vectors{
 	{-1, 1, 1}, {1, 1, 1}}
-var white_pawn_vectors = t_vectors{
+var white_pawn_vectors = vectors{
 	{-1, -1, 1}, {1, -1, 1}}
-var bishop_vectors = t_vectors{
+var bishop_vectors = vectors{
 	{-1, -1, 7}, {1, 1, 7}, {-1, 1, 7}, {1, -1, 7}}
-var rook_vectors = t_vectors{
+var rook_vectors = vectors{
 	{0, -1, 7}, {-1, 0, 7}, {0, 1, 7}, {1, 0, 7}}
-var knight_vectors = t_vectors{
+var knighvectors = vectors{
 	{-2, 1, 1}, {2, -1, 1}, {2, 1, 1}, {-2, -1, 1}, {-1, -2, 1}, {-1, 2, 1}, {1, -2, 1}, {1, 2, 1}}
-var queen_vectors = t_vectors{
+var queen_vectors = vectors{
 	{-1, -1, 7}, {1, 1, 7}, {-1, 1, 7}, {1, -1, 7}, {0, -1, 7}, {-1, 0, 7}, {0, 1, 7}, {1, 0, 7}}
-var king_vectors = t_vectors{
+var king_vectors = vectors{
 	{-1, -1, 1}, {1, 1, 1}, {-1, 1, 1}, {1, -1, 1}, {0, -1, 1}, {-1, 0, 1}, {0, 1, 1}, {1, 0, 1}}
 
-var white_tests = t_tests{
-	{[]byte("qb"), bishop_vectors}, {[]byte("qr"), rook_vectors}, {[]byte("n"), knight_vectors},
+var white_tests = tests{
+	{[]byte("qb"), bishop_vectors}, {[]byte("qr"), rook_vectors}, {[]byte("n"), knighvectors},
 	{[]byte("k"), king_vectors}, {[]byte("p"), white_pawn_vectors}}
-var black_tests = t_tests{
-	{[]byte("QB"), bishop_vectors}, {[]byte("QR"), rook_vectors}, {[]byte("N"), knight_vectors},
+var black_tests = tests{
+	{[]byte("QB"), bishop_vectors}, {[]byte("QR"), rook_vectors}, {[]byte("N"), knighvectors},
 	{[]byte("K"), king_vectors}, {[]byte("P"), black_pawn_vectors}}
 
 var piece_values = map[byte][]int{
@@ -180,38 +180,38 @@ func max(a int, b int) int {
 	return b
 }
 
-func copy_board(board t_board) t_board {
-	new_board := make(t_board, 64)
-	copy(new_board, board)
-	return new_board
+func copy_board(brd board) board {
+	new_brd := make(board, 64)
+	copy(new_brd, brd)
+	return new_brd
 }
 
-func append_score_board(boards t_score_boards, board t_board, score int) t_score_boards {
-	score_board := t_score_board{score, board}
+func append_score_board(boards score_boards, brd board, score int) score_boards {
+	score_board := score_board{score, brd}
 	return append(boards, score_board)
 }
 
-func insert_score_board(boards t_score_boards, board t_board, score int) t_score_boards {
+func inserscore_board(boards score_boards, brd board, score int) score_boards {
 	for i := 0; i < len(boards); i++ {
 		if boards[i].score <= score {
-			score_board := t_score_board{score, board}
+			score_board := score_board{score, brd}
 			boards = append(boards, score_board)
 			copy(boards[i+1:], boards[i:])
 			boards[i] = score_board
 			return boards
 		}
 	}
-	return append_score_board(boards, board, score)
+	return append_score_board(boards, brd, score)
 }
 
-func display_board(board t_board) {
+func display_board(brd board) {
 	println()
 	println("  a   b   c   d   e   f   g   h")
 	println("┏━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┓")
 	for row := 0; row < 8; row++ {
 		for col := 0; col < 8; col++ {
 			print("┃")
-			print(" ", unicode_pieces[board[row*8+col]], " ")
+			print(" ", unicode_pieces[brd[row*8+col]], " ")
 		}
 		println("┃", row)
 		if row != 7 {
@@ -221,10 +221,10 @@ func display_board(board t_board) {
 	println("┗━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┛")
 }
 
-func piece_moves(board t_board, index int, moves t_moves) <-chan t_board {
-	yield := make(chan t_board, 64)
+func piece_moves(brd board, index int, moves moves) <-chan board {
+	yield := make(chan board, 64)
 	go func() {
-		piece := board[index]
+		piece := brd[index]
 		ptype := piece_type[piece]
 		promote := []byte("qrbn")
 		if ptype == white {
@@ -256,7 +256,7 @@ func piece_moves(board t_board, index int, moves t_moves) <-chan t_board {
 					break
 				}
 				newindex := y*8 + x
-				newpiece := board[newindex]
+				newpiece := brd[newindex]
 				newtype := piece_type[newpiece]
 				if newtype == ptype {
 					break
@@ -267,17 +267,17 @@ func piece_moves(board t_board, index int, moves t_moves) <-chan t_board {
 				if (flag == must_capture) && (newtype == empty) {
 					break
 				}
-				board[index] = ' '
+				brd[index] = ' '
 				if (y == 0 || y == 7) && (piece == 'P' || piece == 'p') {
 					for _, promote_piece := range promote {
-						board[newindex] = promote_piece
-						yield <- copy_board(board)
+						brd[newindex] = promote_piece
+						yield <- copy_board(brd)
 					}
 				} else {
-					board[newindex] = piece
-					yield <- copy_board(board)
+					brd[newindex] = piece
+					yield <- copy_board(brd)
 				}
-				board[index], board[newindex] = piece, newpiece
+				brd[index], brd[newindex] = piece, newpiece
 				if (flag == may_capture) && (newtype != empty) {
 					break
 				}
@@ -288,7 +288,7 @@ func piece_moves(board t_board, index int, moves t_moves) <-chan t_board {
 	return yield
 }
 
-func piece_scans(board t_board, index int, vectors t_vectors) <-chan byte {
+func piece_scans(brd board, index int, vectors vectors) <-chan byte {
 	yield := make(chan byte, 32)
 	go func() {
 		cx := index % 8
@@ -301,7 +301,7 @@ func piece_scans(board t_board, index int, vectors t_vectors) <-chan byte {
 				y += dy
 				length -= 1
 				if (0 <= x) && (x < 8) && (0 <= y) && (y < 8) {
-					piece := board[y*8+x]
+					piece := brd[y*8+x]
 					if piece != ' ' {
 						yield <- piece
 					}
@@ -313,16 +313,16 @@ func piece_scans(board t_board, index int, vectors t_vectors) <-chan byte {
 	return yield
 }
 
-func in_check(board t_board, colour int) bool {
+func in_check(brd board, colour int) bool {
 	king_piece := byte('K')
 	tests := white_tests
 	if colour == white {
 		king_piece = 'k'
 		tests = black_tests
 	}
-	king_index := bytes.IndexByte(board, king_piece)
+	king_index := bytes.IndexByte(brd, king_piece)
 	for _, test := range tests {
-		piece_chan := piece_scans(board, king_index, test.vectors)
+		piece_chan := piece_scans(brd, king_index, test.vectors)
 		for piece := range piece_chan {
 			if bytes.IndexByte(test.pieces, piece) != -1 {
 				return true
@@ -332,15 +332,15 @@ func in_check(board t_board, colour int) bool {
 	return false
 }
 
-func all_moves(board t_board, colour int) <-chan t_board {
-	yield := make(chan t_board, 32)
+func all_moves(brd board, colour int) <-chan board {
+	yield := make(chan board, 32)
 	go func() {
-		for index, piece := range board {
+		for index, piece := range brd {
 			if piece_type[piece] == colour {
-				board_yield := piece_moves(board, index, moves[piece])
-				for new_board := range board_yield {
-					if !in_check(new_board, colour) {
-						yield <- new_board
+				board_yield := piece_moves(brd, index, moves_map[piece])
+				for new_brd := range board_yield {
+					if !in_check(new_brd, colour) {
+						yield <- new_brd
 					}
 				}
 			}
@@ -371,13 +371,13 @@ func evaluate(board []byte, colour int) int {
 
 var start_time time.Time
 
-func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
+func nexmove(board []byte, colour int, alpha int, beta int, ply int) int {
 	if ply <= 0 {
 		return evaluate(board, colour)
 	}
 	board_yield := all_moves(copy_board(board), colour)
 	for new_board := range board_yield {
-		alpha = max(alpha, -next_move(new_board, -colour, -beta, -alpha, ply-1))
+		alpha = max(alpha, -nexmove(new_board, -colour, -beta, -alpha, ply-1))
 		if alpha >= beta {
 			break
 		}
@@ -388,20 +388,20 @@ func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 	return alpha
 }
 
-func best_move(board t_board, colour int) t_board {
-	score_boards := make(t_score_boards, 0, max_chess_moves)
-	board_yield := all_moves(board, colour)
-	for board := range board_yield {
-		score := evaluate(board, colour)
-		score_boards = insert_score_board(score_boards, board, score)
+func besmove(brd board, colour int) board {
+	score_boards := make(score_boards, 0, max_chess_moves)
+	board_yield := all_moves(brd, colour)
+	for brd := range board_yield {
+		score := evaluate(brd, colour)
+		score_boards = inserscore_board(score_boards, brd, score)
 	}
 	start_time = time.Now()
-	best_board, best_ply_board := board, board
+	best_board, best_ply_board := brd, brd
 	for ply := 1; ply < max_ply; ply++ {
 		println("\nPly =", ply)
 		alpha, beta := -king_value*10, king_value*10
 		for _, score_board := range score_boards {
-			score := -next_move(score_board.board, -colour, -beta, -alpha, ply-1)
+			score := -nexmove(score_board.board, -colour, -beta, -alpha, ply-1)
 			if time.Since(start_time) > max_time_per_move {
 				return best_board
 			}
@@ -423,19 +423,19 @@ func cls() {
 
 func main() {
 	runtime.GOMAXPROCS(16)
-	board := t_board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
+	brd := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
 	colour := white
 	cls()
-	display_board(board)
+	display_board(brd)
 	for {
 		if colour == white {
 			println("\nWhite to move:")
 		} else {
 			println("\nBlack to move:")
 		}
-		board = best_move(board, colour)
+		brd = besmove(brd, colour)
 		colour = -colour
 		cls()
-		display_board(board)
+		display_board(brd)
 	}
 }
