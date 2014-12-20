@@ -83,7 +83,7 @@ var rook_moves = moves{
 	{0, -1, 7, may_capture}, {-1, 0, 7, may_capture}, {0, 1, 7, may_capture}, {1, 0, 7, may_capture}}
 var bishop_moves = moves{
 	{-1, -1, 7, may_capture}, {1, 1, 7, may_capture}, {-1, 1, 7, may_capture}, {1, -1, 7, may_capture}}
-var knighmoves = moves{
+var knight_moves = moves{
 	{-2, 1, 1, may_capture}, {2, -1, 1, may_capture}, {2, 1, 1, may_capture}, {-2, -1, 1, may_capture},
 	{-1, -2, 1, may_capture}, {-1, 2, 1, may_capture}, {1, -2, 1, may_capture}, {1, 2, 1, may_capture}}
 var queen_moves = moves{
@@ -95,7 +95,7 @@ var king_moves = moves{
 
 var moves_map = map[byte]moves{
 	'p': black_pawn_moves, 'P': white_pawn_moves, 'R': rook_moves, 'r': rook_moves,
-	'B': bishop_moves, 'b': bishop_moves, 'N': knighmoves, 'n': knighmoves,
+	'B': bishop_moves, 'b': bishop_moves, 'N': knight_moves, 'n': knight_moves,
 	'Q': queen_moves, 'q': queen_moves, 'K': king_moves, 'k': king_moves}
 
 var black_pawn_vectors = vectors{
@@ -106,7 +106,7 @@ var bishop_vectors = vectors{
 	{-1, -1, 7}, {1, 1, 7}, {-1, 1, 7}, {1, -1, 7}}
 var rook_vectors = vectors{
 	{0, -1, 7}, {-1, 0, 7}, {0, 1, 7}, {1, 0, 7}}
-var knighvectors = vectors{
+var knight_vectors = vectors{
 	{-2, 1, 1}, {2, -1, 1}, {2, 1, 1}, {-2, -1, 1}, {-1, -2, 1}, {-1, 2, 1}, {1, -2, 1}, {1, 2, 1}}
 var queen_vectors = vectors{
 	{-1, -1, 7}, {1, 1, 7}, {-1, 1, 7}, {1, -1, 7}, {0, -1, 7}, {-1, 0, 7}, {0, 1, 7}, {1, 0, 7}}
@@ -114,10 +114,10 @@ var king_vectors = vectors{
 	{-1, -1, 1}, {1, 1, 1}, {-1, 1, 1}, {1, -1, 1}, {0, -1, 1}, {-1, 0, 1}, {0, 1, 1}, {1, 0, 1}}
 
 var white_tests = tests{
-	{[]byte("qb"), bishop_vectors}, {[]byte("qr"), rook_vectors}, {[]byte("n"), knighvectors},
+	{[]byte("qb"), bishop_vectors}, {[]byte("qr"), rook_vectors}, {[]byte("n"), knight_vectors},
 	{[]byte("k"), king_vectors}, {[]byte("p"), white_pawn_vectors}}
 var black_tests = tests{
-	{[]byte("QB"), bishop_vectors}, {[]byte("QR"), rook_vectors}, {[]byte("N"), knighvectors},
+	{[]byte("QB"), bishop_vectors}, {[]byte("QR"), rook_vectors}, {[]byte("N"), knight_vectors},
 	{[]byte("K"), king_vectors}, {[]byte("P"), black_pawn_vectors}}
 
 var piece_values = map[byte][]int{
@@ -361,13 +361,13 @@ func evaluate(board []byte, colour int) int {
 
 var start_time time.Time
 
-func nexmove(board []byte, colour int, alpha int, beta int, ply int) int {
+func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 	if ply <= 0 {
 		return evaluate(board, colour)
 	}
 	board_yield := all_moves(copy_board(board), colour)
 	for new_board := range board_yield {
-		alpha = max(alpha, -nexmove(new_board, -colour, -beta, -alpha, ply-1))
+		alpha = max(alpha, -next_move(new_board, -colour, -beta, -alpha, ply-1))
 		if alpha >= beta {
 			break
 		}
@@ -378,7 +378,7 @@ func nexmove(board []byte, colour int, alpha int, beta int, ply int) int {
 	return alpha
 }
 
-func besmove(brd board, colour int) board {
+func best_move(brd board, colour int) board {
 	score_boards := make(score_boards, 0, max_chess_moves)
 	board_yield := all_moves(brd, colour)
 	for brd := range board_yield {
@@ -391,7 +391,7 @@ func besmove(brd board, colour int) board {
 		println("\nPly =", ply)
 		alpha, beta := -king_value*10, king_value*10
 		for _, score_board := range score_boards {
-			score := -nexmove(score_board.board, -colour, -beta, -alpha, ply-1)
+			score := -next_move(score_board.board, -colour, -beta, -alpha, ply-1)
 			if time.Since(start_time) > max_time_per_move {
 				return best_board
 			}
@@ -423,7 +423,7 @@ func main() {
 		} else {
 			println("\nBlack to move:")
 		}
-		brd = besmove(brd, colour)
+		brd = best_move(brd, colour)
 		colour = -colour
 		cls()
 		display_board(brd)
