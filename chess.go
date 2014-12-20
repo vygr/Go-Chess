@@ -230,7 +230,7 @@ func display_board(brd board) {
 			print("┃")
 			print(" ", unicode_pieces[brd[row*8+col]], " ")
 		}
-		println("┃", row)
+		println("┃", 8 - row)
 		if row != 7 {
 			println("┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫")
 		}
@@ -260,7 +260,7 @@ func piece_moves(brd board, index int, moves moves) <-chan board {
 					if y == 1 {
 						length = 2
 					}
-				} else
+				} else {
 					length = 1
 					if y == 6 {
 						length = 2
