@@ -71,7 +71,7 @@ type vector struct {
 }
 type vectors []vector
 
-//check test, array of pieces that must not be on this vectors fro the king
+//check test, array of pieces that must not be on this vectors from the king
 type test struct {
 	pieces  []byte
 	vectors vectors
