@@ -36,7 +36,7 @@ const (
 	black = -1
 )
 
-//piece capture actions, per vactor
+//piece capture actions, per vector
 const (
 	no_capture   = 0
 	may_capture  = 1
@@ -107,7 +107,7 @@ var king_moves = moves{
 	{0, -1, 1, may_capture}, {-1, 0, 1, may_capture}, {0, 1, 1, may_capture}, {1, 0, 1, may_capture},
 	{-1, -1, 1, may_capture}, {1, 1, 1, may_capture}, {-1, 1, 1, may_capture}, {1, -1, 1, may_capture}}
 
-//map piece to it's movement possibilities
+//map piece to its movement possibilities
 var moves_map = map[byte]moves{
 	'p': black_pawn_moves, 'P': white_pawn_moves, 'R': rook_moves, 'r': rook_moves,
 	'B': bishop_moves, 'b': bishop_moves, 'N': knight_moves, 'n': knight_moves,
@@ -255,13 +255,12 @@ func piece_moves(brd board, index int, moves moves) <-chan board {
 			x, y := cx, cy
 			//special length for pawns so we can adjust for starting 2 hop
 			if length == 0 {
+				length = 1
 				if piece == 'p' {
-					length = 1
 					if y == 1 {
 						length = 2
 					}
 				} else {
-					length = 1
 					if y == 6 {
 						length = 2
 					}
