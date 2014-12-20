@@ -1,14 +1,17 @@
 ///opt/local/bin/go run
 // Copyright (C) 2014 Chris Hinsley.
 
+//package name
 package main
 
+//package imports
 import (
 	"bytes"
 	"runtime"
 	"time"
 )
 
+//control paramaters
 const (
 	max_chess_moves    = 218
 	max_ply            = 10
@@ -16,6 +19,7 @@ const (
 	piece_value_factor = 3
 )
 
+//piece values
 const (
 	king_value   = 1000000
 	queen_value  = 9 * piece_value_factor
@@ -25,28 +29,32 @@ const (
 	pawn_value   = 1 * piece_value_factor
 )
 
+//board square/piece types
 const (
 	white = 1
 	empty = 0
 	black = -1
 )
 
+//piece capture actions, per vactor
 const (
 	no_capture   = 0
 	may_capture  = 1
 	must_capture = 2
 )
 
+//board is array/slice of 64 bytes
 type board []byte
 type boards []board
 
-type vector struct {
-	dx     int
-	dy     int
-	length int
+//evaluation score and board combination
+type score_board struct {
+	score int
+	board board
 }
-type vectors []vector
+type score_boards []score_board
 
+//description of a pieces movement and capture action
 type move struct {
 	dx     int
 	dy     int
@@ -55,26 +63,32 @@ type move struct {
 }
 type moves []move
 
+//description of a pieces check influence
+type vector struct {
+	dx     int
+	dy     int
+	length int
+}
+type vectors []vector
+
+//check test, array of pieces that must not be on this vectors fro the king
 type test struct {
 	pieces  []byte
 	vectors vectors
 }
 type tests []test
 
-type score_board struct {
-	score int
-	board board
-}
-type score_boards []score_board
-
+//map board square contents to piece type/colour
 var piece_type = map[byte]int{
 	'p': black, 'r': black, 'n': black, 'b': black, 'k': black, 'q': black,
 	'P': white, 'R': white, 'N': white, 'B': white, 'K': white, 'Q': white, ' ': empty}
 
+//map board square contents to unicode
 var unicode_pieces = map[byte]string{
 	'p': "♟", 'r': "♜", 'n': "♞", 'b': "♝", 'k': "♚", 'q': "♛",
 	'P': "♙", 'R': "♖", 'N': "♘", 'B': "♗", 'K': "♔", 'Q': "♕", ' ': " "}
 
+//piece move vectors and capture actions
 var black_pawn_moves = moves{
 	{0, 1, 0, no_capture}, {-1, 1, 1, must_capture}, {1, 1, 1, must_capture}}
 var white_pawn_moves = moves{
@@ -93,11 +107,13 @@ var king_moves = moves{
 	{0, -1, 1, may_capture}, {-1, 0, 1, may_capture}, {0, 1, 1, may_capture}, {1, 0, 1, may_capture},
 	{-1, -1, 1, may_capture}, {1, 1, 1, may_capture}, {-1, 1, 1, may_capture}, {1, -1, 1, may_capture}}
 
+//map piece to it's movement possibilities
 var moves_map = map[byte]moves{
 	'p': black_pawn_moves, 'P': white_pawn_moves, 'R': rook_moves, 'r': rook_moves,
 	'B': bishop_moves, 'b': bishop_moves, 'N': knight_moves, 'n': knight_moves,
 	'Q': queen_moves, 'q': queen_moves, 'K': king_moves, 'k': king_moves}
 
+//piece check vectors, king is tested for being on these vectors for check tests
 var black_pawn_vectors = vectors{
 	{-1, 1, 1}, {1, 1, 1}}
 var white_pawn_vectors = vectors{
@@ -113,6 +129,7 @@ var queen_vectors = vectors{
 var king_vectors = vectors{
 	{-1, -1, 1}, {1, 1, 1}, {-1, 1, 1}, {1, -1, 1}, {0, -1, 1}, {-1, 0, 1}, {0, 1, 1}, {1, 0, 1}}
 
+//check tests, piece types given can not be on the vectors given
 var white_tests = tests{
 	{[]byte("qb"), bishop_vectors}, {[]byte("qr"), rook_vectors}, {[]byte("n"), knight_vectors},
 	{[]byte("k"), king_vectors}, {[]byte("p"), white_pawn_vectors}}
@@ -120,11 +137,13 @@ var black_tests = tests{
 	{[]byte("QB"), bishop_vectors}, {[]byte("QR"), rook_vectors}, {[]byte("N"), knight_vectors},
 	{[]byte("K"), king_vectors}, {[]byte("P"), black_pawn_vectors}}
 
+//map piece to black/white scores for board evaluation
 var piece_values = map[byte][]int{
 	'k': {king_value, 0}, 'K': {0, king_value}, 'q': {queen_value, 0}, 'Q': {0, queen_value},
 	'r': {rook_value, 0}, 'R': {0, rook_value}, 'b': {bishop_value, 0}, 'B': {0, bishop_value},
 	'n': {knight_value, 0}, 'N': {0, knight_value}, 'p': {pawn_value, 0}, 'P': {0, pawn_value}}
 
+//pieces other than king values for position in board evaluation
 var generic_position_values = []int{
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 1, 1, 1, 1, 1, 1, 0,
@@ -135,6 +154,7 @@ var generic_position_values = []int{
 	0, 1, 1, 1, 1, 1, 1, 0,
 	0, 0, 0, 0, 0, 0, 0, 0}
 
+//white king values for position in board evaluation
 var white_king_position_values = []int{
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0,
@@ -145,6 +165,7 @@ var white_king_position_values = []int{
 	0, 0, 0, 0, 0, 0, 0, 0,
 	3, 3, 3, 3, 3, 3, 3, 3}
 
+//black king values for position in board evaluation
 var black_king_position_values = []int{
 	3, 3, 3, 3, 3, 3, 3, 3,
 	0, 0, 0, 0, 0, 0, 0, 0,
@@ -155,6 +176,7 @@ var black_king_position_values = []int{
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0}
 
+//map piece to position value table
 var piece_positions = map[byte][]int{
 	'k': black_king_position_values, 'K': white_king_position_values,
 	'p': generic_position_values, 'P': generic_position_values,
@@ -163,6 +185,7 @@ var piece_positions = map[byte][]int{
 	'r': generic_position_values, 'R': generic_position_values,
 	'q': generic_position_values, 'Q': generic_position_values}
 
+//go has no integer max !!!
 func max(a int, b int) int {
 	if a > b {
 		return a
@@ -170,17 +193,20 @@ func max(a int, b int) int {
 	return b
 }
 
+//copy board
 func copy_board(brd board) board {
 	new_brd := make(board, 64)
 	copy(new_brd, brd)
 	return new_brd
 }
 
+//append a score/board combination
 func append_score_board(boards score_boards, brd board, score int) score_boards {
 	score_board := score_board{score, brd}
 	return append(boards, score_board)
 }
 
+//insert a score/board combination
 func insert_score_board(boards score_boards, brd board, score int) score_boards {
 	for i := 0; i < len(boards); i++ {
 		if boards[i].score <= score {
@@ -194,6 +220,7 @@ func insert_score_board(boards score_boards, brd board, score int) score_boards 
 	return append_score_board(boards, brd, score)
 }
 
+//display board converting to unicode chess characters
 func display_board(brd board) {
 	println()
 	println("  a   b   c   d   e   f   g   h")
@@ -211,6 +238,7 @@ func display_board(brd board) {
 	println("┗━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┻━━━┛")
 }
 
+//generate all boards for a piece index and moves possibility
 func piece_moves(brd board, index int, moves moves) <-chan board {
 	yield := make(chan board, 64)
 	go func() {
@@ -278,6 +306,7 @@ func piece_moves(brd board, index int, moves moves) <-chan board {
 	return yield
 }
 
+//generate all first hit pieces from index position along given vectors
 func piece_scans(brd board, index int, vectors vectors) <-chan byte {
 	yield := make(chan byte, 32)
 	go func() {
@@ -303,6 +332,7 @@ func piece_scans(brd board, index int, vectors vectors) <-chan byte {
 	return yield
 }
 
+//test if king of given colour is in check
 func in_check(brd board, colour int) bool {
 	king_piece := byte('K')
 	tests := white_tests
@@ -322,6 +352,7 @@ func in_check(brd board, colour int) bool {
 	return false
 }
 
+//generate all moves (boards) for the given colours turn filtering out position where king is in check
 func all_moves(brd board, colour int) <-chan board {
 	yield := make(chan board, 32)
 	go func() {
@@ -340,6 +371,7 @@ func all_moves(brd board, colour int) <-chan board {
 	return yield
 }
 
+//evaluate (score) a board for the colour given
 func evaluate(board []byte, colour int) int {
 	black_score, white_score := 0, 0
 	for index, piece := range board {
@@ -359,8 +391,10 @@ func evaluate(board []byte, colour int) int {
 	return (white_score - black_score) * colour
 }
 
+//star time of move
 var start_time time.Time
 
+//negamax alpha/beta pruning minmax search for given ply
 func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 	if ply <= 0 {
 		return evaluate(board, colour)
@@ -378,6 +412,7 @@ func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 	return alpha
 }
 
+//best move for given board position for given colour
 func best_move(brd board, colour int) board {
 	score_boards := make(score_boards, 0, max_chess_moves)
 	board_yield := all_moves(brd, colour)
@@ -407,10 +442,12 @@ func best_move(brd board, colour int) board {
 	return best_board
 }
 
+//clear screen
 func cls() {
 	print("\033[H\033[2J")
 }
 
+//setup first board, loop for white..black..white..black...
 func main() {
 	runtime.GOMAXPROCS(16)
 	brd := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
