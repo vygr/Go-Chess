@@ -1,3 +1,4 @@
+///opt/local/bin/go run
 // Copyright (C) 2014 Chris Hinsley.
 
 package main
