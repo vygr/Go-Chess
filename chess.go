@@ -181,7 +181,7 @@ func append_score_board(boards score_boards, brd board, score int) score_boards 
 	return append(boards, score_board)
 }
 
-func inserscore_board(boards score_boards, brd board, score int) score_boards {
+func insert_score_board(boards score_boards, brd board, score int) score_boards {
 	for i := 0; i < len(boards); i++ {
 		if boards[i].score <= score {
 			score_board := score_board{score, brd}
@@ -383,7 +383,7 @@ func besmove(brd board, colour int) board {
 	board_yield := all_moves(brd, colour)
 	for brd := range board_yield {
 		score := evaluate(brd, colour)
-		score_boards = inserscore_board(score_boards, brd, score)
+		score_boards = insert_score_board(score_boards, brd, score)
 	}
 	start_time = time.Now()
 	best_board, best_ply_board := brd, brd
