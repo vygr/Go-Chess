@@ -67,16 +67,6 @@ type score_board struct {
 }
 type score_boards []score_board
 
-func (boards score_boards) Len() int {
-	return len(boards)
-}
-func (boards score_boards) Swap(i, j int) {
-	boards[i], boards[j] = boards[j], boards[i]
-}
-func (boards score_boards) Less(i, j int) bool {
-	return boards[i].score > boards[j].score
-}
-
 var piece_type = map[byte]int{
 	'p': black, 'r': black, 'n': black, 'b': black, 'k': black, 'q': black,
 	'P': white, 'R': white, 'N': white, 'B': white, 'K': white, 'Q': white, ' ': empty}
