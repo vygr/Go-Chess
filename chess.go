@@ -329,13 +329,16 @@ func piece_scans(brd board, index int, vectors vectors) <-chan byte {
 				y += dy
 				length -= 1
 				if (0 <= x) && (x < 8) && (0 <= y) && (y < 8) {
+					//still on the board
 					piece := brd[y*8+x]
 					if piece != ' ' {
+						//not empty square so yield piece
 						yield <- piece
 					}
 				}
 			}
 		}
+		//close yield channel to break out of 'range' by user of generator
 		close(yield)
 	}()
 	return yield
@@ -346,18 +349,22 @@ func in_check(brd board, colour int) bool {
 	king_piece := byte('K')
 	tests := white_tests
 	if colour == white {
+		//testing black king in check rather than white
 		king_piece = 'k'
 		tests = black_tests
 	}
+	//find king index on board
 	king_index := bytes.IndexByte(brd, king_piece)
 	for _, test := range tests {
 		piece_chan := piece_scans(brd, king_index, test.vectors)
 		for piece := range piece_chan {
 			if bytes.IndexByte(test.pieces, piece) != -1 {
+				//yes we found one of the pieces along a clear vector from king
 				return true
 			}
 		}
 	}
+	//not in check
 	return false
 }
 
@@ -365,11 +372,14 @@ func in_check(brd board, colour int) bool {
 func all_moves(brd board, colour int) <-chan board {
 	yield := make(chan board, 32)
 	go func() {
+		//enumarate the board square by square
 		for index, piece := range brd {
 			if piece_type[piece] == colour {
+				//one of our pieces ! so gather all boards from possible moves of this peice
 				board_yield := piece_moves(brd, index, moves_map[piece])
 				for new_brd := range board_yield {
 					if !in_check(new_brd, colour) {
+						//on this board king is not in check
 						yield <- new_brd
 					}
 				}
@@ -386,12 +396,14 @@ func evaluate(board []byte, colour int) int {
 	for index, piece := range board {
 		ptype := piece_type[piece]
 		if ptype != empty {
+			//add score for position on the board, near center, clear lines etc
 			position_value := piece_positions[piece][index]
 			if ptype == black {
 				black_score += position_value
 			} else {
 				white_score += position_value
 			}
+			//add score for piece type, queen, rook etc
 			values := piece_values[piece]
 			black_score += values[0]
 			white_score += values[1]
@@ -412,9 +424,11 @@ func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 	for new_board := range board_yield {
 		alpha = max(alpha, -next_move(new_board, -colour, -beta, -alpha, ply-1))
 		if alpha >= beta {
+			//opponent would not allow this branch, so we can't get here, so back out
 			break
 		}
 		if time.Since(start_time) > max_time_per_move {
+			//time has expired for this move
 			break
 		}
 	}
@@ -423,26 +437,32 @@ func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 
 //best move for given board position for given colour
 func best_move(brd board, colour int) board {
+	//first ply of boards, sorted by score to help alpha/beta pruning
 	score_boards := make(score_boards, 0, max_chess_moves)
 	board_yield := all_moves(brd, colour)
 	for brd := range board_yield {
 		score := evaluate(brd, colour)
 		score_boards = insert_score_board(score_boards, brd, score)
 	}
+	//start move timer
 	start_time = time.Now()
 	best_board, best_ply_board := brd, brd
 	for ply := 1; ply < max_ply; ply++ {
+		//iterative deepening of ply so we allways have a best move to go with if the timer expires
 		println("\nPly =", ply)
 		alpha, beta := -king_value*10, king_value*10
 		for _, score_board := range score_boards {
 			score := -next_move(score_board.board, -colour, -beta, -alpha, ply-1)
 			if time.Since(start_time) > max_time_per_move {
+				//move timer expired
 				return best_board
 			}
 			if score > alpha {
+				//got a better board than last best
 				alpha, best_ply_board = score, score_board.board
 				print("*")
 			} else {
+				//just tick off another board
 				print(".")
 			}
 		}
