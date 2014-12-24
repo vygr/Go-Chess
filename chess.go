@@ -15,7 +15,7 @@ import (
 const (
 	max_chess_moves    = 218
 	max_ply            = 10
-	max_time_per_move  = 10 * 1000000000
+	max_time_per_move  = 10
 	piece_value_factor = 3
 )
 
@@ -426,7 +426,7 @@ func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 			//opponent would not allow this branch, so we can't get here, so back out
 			break
 		}
-		if time.Since(start_time) > max_time_per_move {
+		if time.Since(start_time).Seconds() > max_time_per_move {
 			//time has expired for this move
 			break
 		}
@@ -452,7 +452,7 @@ func best_move(brd board, colour int) board {
 		alpha, beta := -king_value*10, king_value*10
 		for _, score_board := range score_boards {
 			score := -next_move(score_board.board, -colour, -beta, -alpha, ply-1)
-			if time.Since(start_time) > max_time_per_move {
+			if time.Since(start_time).Seconds() > max_time_per_move {
 				//move timer expired
 				return best_board
 			}
