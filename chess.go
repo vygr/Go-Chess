@@ -200,6 +200,19 @@ func copy_board(brd board) board {
 	return new_brd
 }
 
+//compare boards
+func boards_equal(b1, b2 board) bool {
+	if b1 == nil || b2 == nil {
+		return false
+	}
+	for i := 0; i < len(b1); i++ {
+		if b1[i] != b2[i] {
+			return false
+		}
+	}
+	return true
+}
+
 //append a score/board combination
 func append_score_board(boards score_boards, brd board, score int) score_boards {
 	score_board := score_board{score, brd}
@@ -478,18 +491,6 @@ func cls() {
 	print("\033[H\033[2J")
 }
 
-func boards_same(b1, b2 board) bool {
-	if b1 == nil || b2 == nil {
-		return false
-	}
-	for i := 0; i < len(b1); i++ {
-		if b1[i] != b2[i] {
-			return false
-		}
-	}
-	return true
-}
-
 //setup first board, loop for white..black..white..black...
 func main() {
 	runtime.GOMAXPROCS(16)
@@ -512,7 +513,7 @@ func main() {
 		}
 		mate = false
 		for i := 0; i < len(history); i++ {
-			if boards_same(brd, history[i]) {
+			if boards_equal(brd, history[i]) {
 				mate = true
 				break
 			}
