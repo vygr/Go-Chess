@@ -230,7 +230,7 @@ func display_board(brd board) {
 			print("┃")
 			print(" ", unicode_pieces[brd[row*8+col]], " ")
 		}
-		println("┃", 8 - row)
+		println("┃", 8-row)
 		if row != 7 {
 			println("┣━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━╋━━━┫")
 		}
@@ -435,13 +435,16 @@ func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 }
 
 //best move for given board position for given colour
-func best_move(brd board, colour int) board {
+func best_move(brd board, colour int) (board, bool) {
 	//first ply of boards, sorted by score to help alpha/beta pruning
 	score_boards := make(score_boards, 0, max_chess_moves)
 	board_yield := all_moves(brd, colour)
 	for brd := range board_yield {
 		score := evaluate(brd, colour)
 		score_boards = insert_score_board(score_boards, brd, score)
+	}
+	if len(score_boards) == 0 {
+		return nil, true
 	}
 	//start move timer
 	start_time = time.Now()
@@ -454,7 +457,7 @@ func best_move(brd board, colour int) board {
 			score := -next_move(score_board.board, -colour, -beta, -alpha, ply-1)
 			if time.Since(start_time).Seconds() > max_time_per_move {
 				//move timer expired
-				return best_board
+				return best_board, false
 			}
 			if score > alpha {
 				//got a better board than last best
@@ -467,7 +470,7 @@ func best_move(brd board, colour int) board {
 		}
 		best_board = best_ply_board
 	}
-	return best_board
+	return best_board, false
 }
 
 //clear screen
@@ -475,11 +478,25 @@ func cls() {
 	print("\033[H\033[2J")
 }
 
+func boards_same(b1, b2 board) bool {
+	if b1 == nil || b2 == nil {
+		return false
+	}
+	for i := 0; i < len(b1); i++ {
+		if b1[i] != b2[i] {
+			return false
+		}
+	}
+	return true
+}
+
 //setup first board, loop for white..black..white..black...
 func main() {
 	runtime.GOMAXPROCS(16)
-	brd := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
+	var mate bool
+	history := make([]board, 0)
 	colour := white
+	brd := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
 	cls()
 	display_board(brd)
 	for {
@@ -488,7 +505,23 @@ func main() {
 		} else {
 			println("\nBlack to move:")
 		}
-		brd = best_move(brd, colour)
+		brd, mate = best_move(brd, colour)
+		if mate {
+			println("\n** Checkmate **")
+			break
+		}
+		mate = false
+		for i := 0; i < len(history); i++ {
+			if boards_same(brd, history[i]) {
+				mate = true
+				break
+			}
+		}
+		if mate {
+			println("\n** Stalemate **")
+			break
+		}
+		history = append(history, copy_board(brd))
 		colour = -colour
 		cls()
 		display_board(brd)
