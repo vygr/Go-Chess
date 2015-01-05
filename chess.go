@@ -45,12 +45,11 @@ const (
 
 //board is array/slice of 64 bytes
 type board []byte
-type boards []board
 
 //evaluation score and board combination
 type score_board struct {
 	score int
-	board board
+	brd   *board
 }
 type score_boards []score_board
 
@@ -123,7 +122,7 @@ var bishop_vectors = vectors{
 var rook_vectors = vectors{
 	{0, -1, 7}, {-1, 0, 7}, {0, 1, 7}, {1, 0, 7}}
 var knight_vectors = vectors{
-	{-2, 1, 1}, {2, -1, 1}, {2, 1, 1}, {-2, -1, 1}, {-1, -2, 1}, {-1, 2, 1}, {1, -2, 1}, {1, 2, 1}}
+	{-1, -2, 1}, {-1, 2, 1}, {-2, -1, 1}, {-2, 1, 1}, {1, -2, 1}, {1, 2, 1}, {2, -1, 1}, {2, 1, 1}}
 var queen_vectors = vectors{
 	{-1, -1, 7}, {1, 1, 7}, {-1, 1, 7}, {1, -1, 7}, {0, -1, 7}, {-1, 0, 7}, {0, 1, 7}, {1, 0, 7}}
 var king_vectors = vectors{
@@ -194,17 +193,15 @@ func max(a int, b int) int {
 }
 
 //copy board
-func copy_board(brd board) board {
+func copy_board(brd *board) *board {
 	new_brd := make(board, 64)
-	copy(new_brd, brd)
-	return new_brd
+	copy(new_brd, *brd)
+	return &new_brd
 }
 
 //compare boards
-func boards_equal(b1, b2 board) bool {
-	if b1 == nil || b2 == nil {
-		return false
-	}
+func boards_equal(brd1, brd2 *board) bool {
+	b1, b2 := *brd1, *brd2
 	for i := 0; i < len(b1); i++ {
 		if b1[i] != b2[i] {
 			return false
@@ -214,13 +211,13 @@ func boards_equal(b1, b2 board) bool {
 }
 
 //append a score/board combination
-func append_score_board(boards score_boards, brd board, score int) score_boards {
+func append_score_board(boards score_boards, brd *board, score int) score_boards {
 	score_board := score_board{score, brd}
 	return append(boards, score_board)
 }
 
 //insert a score/board combination
-func insert_score_board(boards score_boards, brd board, score int) score_boards {
+func insert_score_board(boards score_boards, brd *board, score int) score_boards {
 	for i := 0; i < len(boards); i++ {
 		if boards[i].score <= score {
 			score_board := score_board{score, brd}
@@ -234,14 +231,15 @@ func insert_score_board(boards score_boards, brd board, score int) score_boards 
 }
 
 //display board converting to unicode chess characters
-func display_board(brd board) {
+func display_board(brd *board) {
+	b := *brd
 	println()
 	println("  a   b   c   d   e   f   g   h")
 	println("┏━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┳━━━┓")
 	for row := 0; row < 8; row++ {
 		for col := 0; col < 8; col++ {
 			print("┃")
-			print(" ", unicode_pieces[brd[row*8+col]], " ")
+			print(" ", unicode_pieces[b[row*8+col]], " ")
 		}
 		println("┃", 8-row)
 		if row != 7 {
@@ -252,10 +250,11 @@ func display_board(brd board) {
 }
 
 //generate all boards for a piece index and moves possibility
-func piece_moves(brd board, index int, moves moves) <-chan board {
-	yield := make(chan board, 64)
+func piece_moves(brd *board, index int, moves moves) <-chan *board {
+	b := *brd
+	yield := make(chan *board, 64)
 	go func() {
-		piece := brd[index]
+		piece := b[index]
 		ptype := piece_type[piece]
 		promote := []byte("qrbn")
 		if ptype == white {
@@ -288,7 +287,7 @@ func piece_moves(brd board, index int, moves moves) <-chan board {
 					break
 				}
 				newindex := y*8 + x
-				newpiece := brd[newindex]
+				newpiece := b[newindex]
 				newtype := piece_type[newpiece]
 				if newtype == ptype {
 					//hit one of our own piece type (black hit black etc)
@@ -302,19 +301,19 @@ func piece_moves(brd board, index int, moves moves) <-chan board {
 					//must capture and got empty square
 					break
 				}
-				brd[index] = ' '
+				b[index] = ' '
 				if (y == 0 || y == 7) && (piece == 'P' || piece == 'p') {
 					//try all the pawn promotion possibilities
 					for _, promote_piece := range promote {
-						brd[newindex] = promote_piece
+						b[newindex] = promote_piece
 						yield <- copy_board(brd)
 					}
 				} else {
 					//generate this as a possible move
-					brd[newindex] = piece
+					b[newindex] = piece
 					yield <- copy_board(brd)
 				}
-				brd[index], brd[newindex] = piece, newpiece
+				b[index], b[newindex] = piece, newpiece
 				if (flag == may_capture) && (newtype != empty) {
 					//may capture and we did so !
 					break
@@ -328,8 +327,8 @@ func piece_moves(brd board, index int, moves moves) <-chan board {
 }
 
 //generate all first hit pieces from index position along given vectors
-func piece_scans(brd board, index int, vectors vectors) <-chan byte {
-	yield := make(chan byte, 32)
+func piece_scans(brd *board, index int, vectors vectors) <-chan byte {
+	yield := make(chan byte, 16)
 	go func() {
 		cx := index % 8
 		cy := index / 8
@@ -342,10 +341,12 @@ func piece_scans(brd board, index int, vectors vectors) <-chan byte {
 				length -= 1
 				if (0 <= x) && (x < 8) && (0 <= y) && (y < 8) {
 					//still on the board
-					piece := brd[y*8+x]
+					b := *brd
+					piece := b[y*8+x]
 					if piece != ' ' {
 						//not empty square so yield piece
 						yield <- piece
+						break
 					}
 				}
 			}
@@ -357,22 +358,26 @@ func piece_scans(brd board, index int, vectors vectors) <-chan byte {
 }
 
 //test if king of given colour is in check
-func in_check(brd board, colour int) bool {
+func in_check(brd *board, colour int) bool {
 	king_piece := byte('K')
 	tests := white_tests
-	if colour == white {
+	if colour == black {
 		//testing black king in check rather than white
 		king_piece = 'k'
 		tests = black_tests
 	}
 	//find king index on board
-	king_index := bytes.IndexByte(brd, king_piece)
-	for _, test := range tests {
-		piece_chan := piece_scans(brd, king_index, test.vectors)
-		for piece := range piece_chan {
-			if bytes.IndexByte(test.pieces, piece) != -1 {
-				//yes we found one of the pieces along a clear vector from king
-				return true
+	king_index := bytes.IndexByte(*brd, king_piece)
+	if king_index == -1 {
+		return true
+	} else {
+		for _, test := range tests {
+			piece_chan := piece_scans(brd, king_index, test.vectors)
+			for piece := range piece_chan {
+				if bytes.IndexByte(test.pieces, piece) != -1 {
+					//yes we found one of the pieces along a clear vector from king
+					return true
+				}
 			}
 		}
 	}
@@ -381,11 +386,11 @@ func in_check(brd board, colour int) bool {
 }
 
 //generate all moves (boards) for the given colours turn filtering out position where king is in check
-func all_moves(brd board, colour int) <-chan board {
-	yield := make(chan board, 32)
+func all_moves(brd *board, colour int) <-chan *board {
+	yield := make(chan *board, 32)
 	go func() {
 		//enumarate the board square by square
-		for index, piece := range brd {
+		for index, piece := range *brd {
 			if piece_type[piece] == colour {
 				//one of our pieces ! so gather all boards from possible moves of this peice
 				board_yield := piece_moves(brd, index, moves_map[piece])
@@ -403,9 +408,9 @@ func all_moves(brd board, colour int) <-chan board {
 }
 
 //evaluate (score) a board for the colour given
-func evaluate(board []byte, colour int) int {
+func evaluate(brd *board, colour int) int {
 	black_score, white_score := 0, 0
-	for index, piece := range board {
+	for index, piece := range *brd {
 		ptype := piece_type[piece]
 		if ptype != empty {
 			//add score for position on the board, near center, clear lines etc
@@ -428,11 +433,11 @@ func evaluate(board []byte, colour int) int {
 var start_time time.Time
 
 //negamax alpha/beta pruning minmax search for given ply
-func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
+func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 	if ply <= 0 {
-		return evaluate(board, colour)
+		return evaluate(brd, colour)
 	}
-	board_yield := all_moves(copy_board(board), colour)
+	board_yield := all_moves(copy_board(brd), colour)
 	for new_board := range board_yield {
 		alpha = max(alpha, -next_move(new_board, -colour, -beta, -alpha, ply-1))
 		if alpha >= beta {
@@ -448,7 +453,7 @@ func next_move(board []byte, colour int, alpha int, beta int, ply int) int {
 }
 
 //best move for given board position for given colour
-func best_move(brd board, colour int) (board, bool) {
+func best_move(brd *board, colour int) *board {
 	//first ply of boards, sorted by score to help alpha/beta pruning
 	score_boards := make(score_boards, 0, max_chess_moves)
 	board_yield := all_moves(brd, colour)
@@ -457,7 +462,7 @@ func best_move(brd board, colour int) (board, bool) {
 		score_boards = insert_score_board(score_boards, brd, score)
 	}
 	if len(score_boards) == 0 {
-		return nil, true
+		return nil
 	}
 	//start move timer
 	start_time = time.Now()
@@ -467,14 +472,14 @@ func best_move(brd board, colour int) (board, bool) {
 		println("\nPly =", ply)
 		alpha, beta := -king_value*10, king_value*10
 		for _, score_board := range score_boards {
-			score := -next_move(score_board.board, -colour, -beta, -alpha, ply-1)
+			score := -next_move(score_board.brd, -colour, -beta, -alpha, ply-1)
 			if time.Since(start_time).Seconds() > max_time_per_move {
 				//move timer expired
-				return best_board, false
+				return best_board
 			}
 			if score > alpha {
 				//got a better board than last best
-				alpha, best_ply_board = score, score_board.board
+				alpha, best_ply_board = score, score_board.brd
 				print("*")
 			} else {
 				//just tick off another board
@@ -483,7 +488,7 @@ func best_move(brd board, colour int) (board, bool) {
 		}
 		best_board = best_ply_board
 	}
-	return best_board, false
+	return best_board
 }
 
 //clear screen
@@ -493,11 +498,11 @@ func cls() {
 
 //setup first board, loop for white..black..white..black...
 func main() {
-	runtime.GOMAXPROCS(16)
-	var mate bool
-	history := make([]board, 0)
+	runtime.GOMAXPROCS(8)
+	b := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
+	brd := &b
+	history := make([]*board, 0)
 	colour := white
-	brd := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
 	cls()
 	display_board(brd)
 	for {
@@ -506,12 +511,12 @@ func main() {
 		} else {
 			println("\nBlack to move:")
 		}
-		brd, mate = best_move(brd, colour)
-		if mate {
+		brd = best_move(brd, colour)
+		if brd == nil {
 			println("\n** Checkmate **")
 			break
 		}
-		mate = false
+		mate := false
 		for i := 0; i < len(history); i++ {
 			if boards_equal(brd, history[i]) {
 				mate = true
