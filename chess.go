@@ -466,10 +466,10 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 		mate, _ = in_check(brd, colour, -1)
 		if mate {
 			//check mate
-			return king_value * colour * -10
+			return colour * king_value * -1000
 		}
 		//stale mate
-		return king_value * colour * 10
+		return colour * king_value * 1000
 	}
 	return alpha
 }
@@ -478,7 +478,7 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 func best_move(brd *board, colour int) *board {
 	//first ply of boards, sorted by score to help alpha/beta pruning
 	score_boards := make(score_boards, 0, max_chess_moves)
-	board_yield := all_moves(brd, colour)
+	board_yield := all_moves(copy_board(brd), colour)
 	for brd := range board_yield {
 		score := evaluate(brd, colour)
 		score_boards = insert_score_board(score_boards, brd, score)
