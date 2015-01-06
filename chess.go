@@ -358,7 +358,7 @@ func piece_scans(brd *board, index int, vectors vectors) <-chan byte {
 }
 
 //test if king of given colour is in check
-func in_check(brd *board, colour int) bool {
+func in_check(brd *board, colour, king_index int) (bool, int) {
 	king_piece := byte('K')
 	tests := white_tests
 	if colour == black {
@@ -367,35 +367,40 @@ func in_check(brd *board, colour int) bool {
 		tests = black_tests
 	}
 	//find king index on board
-	king_index := bytes.IndexByte(*brd, king_piece)
-	if king_index == -1 {
-		return true
-	} else {
-		for _, test := range tests {
-			piece_chan := piece_scans(brd, king_index, test.vectors)
-			for piece := range piece_chan {
-				if bytes.IndexByte(test.pieces, piece) != -1 {
-					//yes we found one of the pieces along a clear vector from king
-					return true
-				}
+	b := *brd
+	if (king_index == -1) || (b[king_index] != king_piece) {
+		king_index = bytes.IndexByte(b, king_piece)
+		if king_index == -1 {
+			return true, king_index
+		}
+	}
+	for _, test := range tests {
+		piece_chan := piece_scans(brd, king_index, test.vectors)
+		for piece := range piece_chan {
+			if bytes.IndexByte(test.pieces, piece) != -1 {
+				//yes we found one of the pieces along a clear vector from king
+				return true, king_index
 			}
 		}
 	}
 	//not in check
-	return false
+	return false, king_index
 }
 
 //generate all moves (boards) for the given colours turn filtering out position where king is in check
 func all_moves(brd *board, colour int) <-chan *board {
-	yield := make(chan *board, 32)
+	yield := make(chan *board, max_chess_moves)
 	go func() {
 		//enumarate the board square by square
+		king_index := -1
+		check := false
 		for index, piece := range *brd {
 			if piece_type[piece] == colour {
 				//one of our pieces ! so gather all boards from possible moves of this peice
 				board_yield := piece_moves(brd, index, moves_map[piece])
 				for new_brd := range board_yield {
-					if !in_check(new_brd, colour) {
+					check, king_index = in_check(new_brd, colour, king_index)
+					if !check {
 						//on this board king is not in check
 						yield <- new_brd
 					}
