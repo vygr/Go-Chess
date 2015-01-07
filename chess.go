@@ -219,7 +219,7 @@ func append_score_board(boards score_boards, brd *board, score int) score_boards
 //insert a score/board combination
 func insert_score_board(boards score_boards, brd *board, score int) score_boards {
 	for i := 0; i < len(boards); i++ {
-		if boards[i].score <= score {
+		if boards[i].score < score {
 			score_board := score_board{score, brd}
 			boards = append(boards, score_board)
 			copy(boards[i+1:], boards[i:])
@@ -374,11 +374,8 @@ func in_check(brd *board, colour, king_index int) (bool, int) {
 	}
 	//find king index on board
 	b := *brd
-	if (king_index == -1) || (b[king_index] != king_piece) {
+	if b[king_index] != king_piece {
 		king_index = bytes.IndexByte(b, king_piece)
-		if king_index == -1 {
-			return true, king_index
-		}
 	}
 	for _, test := range tests {
 		piece_chan := piece_scans(brd, king_index, test.vectors)
@@ -398,7 +395,7 @@ func all_moves(brd *board, colour int) <-chan *board {
 	yield := make(chan *board, max_chess_moves)
 	go func() {
 		//enumarate the board square by square
-		king_index := -1
+		king_index := 0
 		check := false
 		for index, piece := range *brd {
 			if piece_type[piece] == colour {
@@ -463,13 +460,13 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 		}
 	}
 	if mate {
-		mate, _ = in_check(brd, colour, -1)
+		mate, _ = in_check(brd, colour, 0)
 		if mate {
 			//check mate
-			return colour * king_value * -1000
+			return colour * king_value * -100
 		}
 		//stale mate
-		return colour * king_value * 1000
+		return colour * king_value * 100
 	}
 	return alpha
 }
@@ -492,7 +489,7 @@ func best_move(brd *board, colour int) *board {
 	for ply := 1; ply < max_ply; ply++ {
 		//iterative deepening of ply so we allways have a best move to go with if the timer expires
 		println("\nPly =", ply)
-		alpha, beta := -king_value*100, king_value*100
+		alpha, beta := -king_value*10, king_value*10
 		for _, score_board := range score_boards {
 			score := -next_move(score_board.brd, -colour, -beta, -alpha, ply-1)
 			if time.Since(start_time).Seconds() > max_time_per_move {
@@ -516,6 +513,7 @@ func best_move(brd *board, colour int) *board {
 //setup first board, loop for white..black..white..black...
 func main() {
 	runtime.GOMAXPROCS(8)
+	slp, _ := time.ParseDuration("0.1s")
 	b := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
 	brd := &b
 	history := make([]*board, 0)
@@ -529,7 +527,7 @@ func main() {
 		}
 		new_brd := best_move(brd, colour)
 		if new_brd == nil {
-			mate, _ := in_check(brd, colour, -1)
+			mate, _ := in_check(brd, colour, 0)
 			if mate {
 				println("\n** Checkmate **")
 			} else {
@@ -548,7 +546,6 @@ func main() {
 			break
 		}
 		history = append(history, copy_board(new_brd))
-		slp, _ := time.ParseDuration("0.1s")
 		for i := 0; i < 3; i++ {
 			display_board(brd)
 			time.Sleep(slp)
