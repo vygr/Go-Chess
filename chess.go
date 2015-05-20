@@ -463,10 +463,10 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 		mate, _ = in_check(brd, colour, 0)
 		if mate {
 			//check mate
-			return colour * king_value * -100
+			return colour * king_value * 100
 		}
 		//stale mate
-		return colour * king_value * 100
+		return colour * king_value * -100
 	}
 	return alpha
 }
@@ -515,6 +515,8 @@ func main() {
 	runtime.GOMAXPROCS(8)
 	slp, _ := time.ParseDuration("0.1s")
 	b := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
+	//b := board("   r   kpB    pp  p  p    r p             PRRP  P P  P P  K     ")
+	//b := board(" k                         Q P     Q P  K                       ")
 	brd := &b
 	history := make([]*board, 0)
 	colour := white
