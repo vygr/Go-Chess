@@ -27,6 +27,7 @@ const (
 	bishop_value = 3 * piece_value_factor
 	knight_value = 3 * piece_value_factor
 	pawn_value   = 1 * piece_value_factor
+	mate_value   = king_value * 10
 )
 
 //board square/piece types
@@ -452,10 +453,10 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 		mate, _ = in_check(brd, colour, 0)
 		if mate {
 			//check mate
-			return king_value * (-100 - ply)
+			return -mate_value - ply
 		}
 		//stale mate
-		return king_value * 100
+		return mate_value
 	}
 	return alpha
 }
@@ -477,7 +478,7 @@ func best_move(brd *board, colour int) *board {
 	for ply := 1; ply < max_ply; ply++ {
 		//iterative deepening of ply so we allways have a best move to go with if the timer expires
 		println("\nPly =", ply)
-		alpha, beta := -king_value*1000, king_value*1000
+		alpha, beta := -mate_value*10, mate_value*10
 		for _, score_board := range score_boards {
 			score := -next_move(score_board.brd, -colour, -beta, -alpha, ply-1)
 			if time.Since(start_time).Seconds() > max_time_per_move {
