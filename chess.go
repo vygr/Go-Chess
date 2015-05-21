@@ -477,7 +477,7 @@ func best_move(brd *board, colour int) *board {
 	for ply := 1; ply < max_ply; ply++ {
 		//iterative deepening of ply so we allways have a best move to go with if the timer expires
 		println("\nPly =", ply)
-		alpha, beta := -king_value*10, king_value*10
+		alpha, beta := -king_value*1000, king_value*1000
 		for _, score_board := range score_boards {
 			score := -next_move(score_board.brd, -colour, -beta, -alpha, ply-1)
 			if time.Since(start_time).Seconds() > max_time_per_move {
