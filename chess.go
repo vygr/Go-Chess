@@ -462,7 +462,7 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 }
 
 //best move for given board position for given colour
-func best_move(brd *board, colour int) *board {
+func best_move(brd *board, colour int, history *[]*board) *board {
 	//first ply of boards, sorted by score to help alpha/beta pruning
 	score_boards := make(score_boards, 0, max_chess_moves)
 	for brd := range all_moves(copy_board(brd), colour) {
@@ -480,7 +480,14 @@ func best_move(brd *board, colour int) *board {
 		println("\nPly =", ply)
 		alpha, beta := -mate_value*10, mate_value*10
 		for _, score_board := range score_boards {
-			score := -next_move(score_board.brd, -colour, -beta, -alpha, ply-1)
+			hist := *history
+			rep := 0
+			for i := 0; i < len(hist); i++ {
+				if boards_equal(score_board.brd, hist[i]) {
+					rep++
+				}
+			}
+			score := -next_move(score_board.brd, -colour, -beta, -alpha, ply-1) - (rep * queen_value)
 			if time.Since(start_time).Seconds() > max_time_per_move {
 				//move timer expired
 				return best_board
@@ -504,9 +511,12 @@ func main() {
 	runtime.GOMAXPROCS(8)
 	slp, _ := time.ParseDuration("0.1s")
 	b := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
+	//b := board("rnb kbnrpppppppp                                PPPPPPPPRNBQKBNR")
 	//b := board("   r   kpB    pp  p  p    r p             PRRP  P P  P P  K     ")
 	//b := board(" k                         Q P     Q P  K                       ")
+	//b := board(" k                           P     Q P  K                       ")
 	//b := board("        p         k    p   rb         p      r              K   ")
+	//b := board("        p         k    p   r          p      r              K   ")
 	brd := &b
 	history := make([]*board, 0)
 	colour := white
@@ -517,7 +527,7 @@ func main() {
 		} else {
 			println("\nBlack to move:")
 		}
-		new_brd := best_move(brd, colour)
+		new_brd := best_move(brd, colour, &history)
 		if new_brd == nil {
 			mate, _ := in_check(brd, colour, 0)
 			if mate {
