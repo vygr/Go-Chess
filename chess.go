@@ -13,20 +13,19 @@ import (
 
 //control paramaters
 const (
-	max_chess_moves    = 218
-	max_ply            = 10
-	max_time_per_move  = 10
-	piece_value_factor = 3
+	max_chess_moves   = 218
+	max_ply           = 10
+	max_time_per_move = 10
 )
 
-//piece values
+//piece values, in centipawns
 const (
-	king_value   = 1000000
-	queen_value  = 9 * piece_value_factor
-	rook_value   = 5 * piece_value_factor
-	bishop_value = 3 * piece_value_factor
-	knight_value = 3 * piece_value_factor
-	pawn_value   = 1 * piece_value_factor
+	king_value   = 20000
+	queen_value  = 900
+	rook_value   = 500
+	bishop_value = 330
+	knight_value = 320
+	pawn_value   = 100
 	mate_value   = king_value * 10
 )
 
@@ -143,47 +142,80 @@ var piece_values = map[byte][]int{
 	'r': {rook_value, 0}, 'R': {0, rook_value}, 'b': {bishop_value, 0}, 'B': {0, bishop_value},
 	'n': {knight_value, 0}, 'N': {0, knight_value}, 'p': {pawn_value, 0}, 'P': {0, pawn_value}}
 
-//pieces other than king values for position in board evaluation
-var generic_position_values = []int{
+//pawn values for position in board evaluation
+var pawn_position_values = []int{
 	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 1, 1, 1, 1, 1, 1, 0,
-	0, 1, 2, 2, 2, 2, 1, 0,
-	0, 1, 2, 3, 3, 2, 1, 0,
-	0, 1, 2, 3, 3, 2, 1, 0,
-	0, 1, 2, 2, 2, 2, 1, 0,
-	0, 1, 1, 1, 1, 1, 1, 0,
+	50, 50, 50, 50, 50, 50, 50, 50,
+	10, 10, 20, 30, 30, 20, 10, 10,
+	5, 5, 10, 25, 25, 10, 5, 5,
+	0, 0, 0, 20, 20, 0, 0, 0,
+	5, -5, -10, 0, 0, -10, -5, 5,
+	5, 10, 10, -20, -20, 10, 10, 5,
 	0, 0, 0, 0, 0, 0, 0, 0}
 
-//white king values for position in board evaluation
-var white_king_position_values = []int{
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	3, 3, 3, 3, 3, 3, 3, 3}
+//knight values for position in board evaluation
+var knight_position_values = []int{
+	-50, -40, -30, -30, -30, -30, -40, -50,
+	-40, -20, 0, 0, 0, 0, -20, -40,
+	-30, 0, 10, 15, 15, 10, 0, -30,
+	-30, 5, 15, 20, 20, 15, 5, -30,
+	-30, 0, 15, 20, 20, 15, 0, -30,
+	-30, 5, 10, 15, 15, 10, 5, -30,
+	-40, -20, 0, 5, 5, 0, -20, -40,
+	-50, -40, -30, -30, -30, -30, -40, -50}
 
-//black king values for position in board evaluation
-var black_king_position_values = []int{
-	3, 3, 3, 3, 3, 3, 3, 3,
+//bishop values for position in board evaluation
+var bishop_position_values = []int{
+	-20, -10, -10, -10, -10, -10, -10, -20,
+	-10, 0, 0, 0, 0, 0, 0, -10,
+	-10, 0, 5, 10, 10, 5, 0, -10,
+	-10, 5, 5, 10, 10, 5, 5, -10,
+	-10, 0, 10, 10, 10, 10, 0, -10,
+	-10, 10, 10, 10, 10, 10, 10, -10,
+	-10, 5, 0, 0, 0, 0, 5, -10,
+	-20, -10, -10, -10, -10, -10, -10, -20}
+
+//rook values for position in board evaluation
+var rook_position_values = []int{
 	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0}
+	5, 10, 10, 10, 10, 10, 10, 5,
+	-5, 0, 0, 0, 0, 0, 0, -5,
+	-5, 0, 0, 0, 0, 0, 0, -5,
+	-5, 0, 0, 0, 0, 0, 0, -5,
+	-5, 0, 0, 0, 0, 0, 0, -5,
+	-5, 0, 0, 0, 0, 0, 0, -5,
+	0, 0, 0, 5, 5, 0, 0, 0}
+
+//queen values for position in board evaluation
+var queen_position_values = []int{
+	-20, -10, -10, -5, -5, -10, -10, -20,
+	-10, 0, 0, 0, 0, 0, 0, -10,
+	-10, 0, 5, 5, 5, 5, 0, -10,
+	-5, 0, 5, 5, 5, 5, 0, -5,
+	0, 0, 5, 5, 5, 5, 0, -5,
+	-10, 5, 5, 5, 5, 5, 0, -10,
+	-10, 0, 5, 0, 0, 0, 0, -10,
+	-20, -10, -10, -5, -5, -10, -10, -20}
+
+//king values for position in board evaluation
+var king_position_values = []int{
+	-30, -40, -40, -50, -50, -40, -40, -30,
+	-30, -40, -40, -50, -50, -40, -40, -30,
+	-30, -40, -40, -50, -50, -40, -40, -30,
+	-30, -40, -40, -50, -50, -40, -40, -30,
+	-20, -30, -30, -40, -40, -30, -30, -20,
+	-10, -20, -20, -20, -20, -20, -20, -10,
+	20, 20, 0, 0, 0, 0, 20, 20,
+	20, 30, 10, 0, 0, 10, 30, 20}
 
 //map piece to position value table
 var piece_positions = map[byte][]int{
-	'k': black_king_position_values, 'K': white_king_position_values,
-	'p': generic_position_values, 'P': generic_position_values,
-	'n': generic_position_values, 'N': generic_position_values,
-	'b': generic_position_values, 'B': generic_position_values,
-	'r': generic_position_values, 'R': generic_position_values,
-	'q': generic_position_values, 'Q': generic_position_values}
+	'k': king_position_values, 'K': king_position_values,
+	'q': queen_position_values, 'Q': queen_position_values,
+	'r': rook_position_values, 'R': rook_position_values,
+	'b': bishop_position_values, 'B': bishop_position_values,
+	'n': knight_position_values, 'N': knight_position_values,
+	'p': pawn_position_values, 'P': pawn_position_values}
 
 //go has no integer max !!!
 func max(a int, b int) int {
@@ -413,11 +445,10 @@ func evaluate(brd *board, colour int) int {
 		ptype := piece_type[piece]
 		if ptype != empty {
 			//add score for position on the board, near center, clear lines etc
-			position_value := piece_positions[piece][index]
 			if ptype == black {
-				black_score += position_value
+				black_score += piece_positions[piece][63 - index]
 			} else {
-				white_score += position_value
+				white_score += piece_positions[piece][index]
 			}
 			//add score for piece type, queen, rook etc
 			values := piece_values[piece]
