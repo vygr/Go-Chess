@@ -463,7 +463,7 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 		mate, _ = in_check(brd, colour, 0)
 		if mate {
 			//check mate
-			return king_value * -100
+			return king_value * (-100 - ply)
 		}
 		//stale mate
 		return king_value * 100
