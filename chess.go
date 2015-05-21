@@ -256,111 +256,103 @@ func display_board(brd *board) {
 }
 
 //generate all boards for a piece index and moves possibility
-func piece_moves(brd *board, index int, moves moves) <-chan *board {
+func piece_moves(brd *board, index int, moves moves) *[]*board {
 	b := *brd
-	yield := make(chan *board, 64)
-	go func() {
-		piece := b[index]
-		ptype := piece_type[piece]
-		promote := []byte("qrbn")
-		if ptype == white {
-			promote = []byte("QRBN")
-		}
-		cx := index % 8
-		cy := index / 8
-		for _, move := range moves {
-			dx, dy, length, flag := move.dx, move.dy, move.length, move.flag
-			x, y := cx, cy
-			//special length for pawns so we can adjust for starting 2 hop
-			if length == 0 {
-				length = 1
-				if piece == 'p' {
-					if y == 1 {
-						length = 2
-					}
-				} else {
-					if y == 6 {
-						length = 2
-					}
+	yield := make([]*board, 0, 64)
+	piece := b[index]
+	ptype := piece_type[piece]
+	promote := []byte("qrbn")
+	if ptype == white {
+		promote = []byte("QRBN")
+	}
+	cx := index % 8
+	cy := index / 8
+	for _, move := range moves {
+		dx, dy, length, flag := move.dx, move.dy, move.length, move.flag
+		x, y := cx, cy
+		//special length for pawns so we can adjust for starting 2 hop
+		if length == 0 {
+			length = 1
+			if piece == 'p' {
+				if y == 1 {
+					length = 2
 				}
-			}
-			for length > 0 {
-				x += dx
-				y += dy
-				length -= 1
-				if (x < 0) || (x >= 8) || (y < 0) || (y >= 8) {
-					//gone off the board
-					break
-				}
-				newindex := y*8 + x
-				newpiece := b[newindex]
-				newtype := piece_type[newpiece]
-				if newtype == ptype {
-					//hit one of our own piece type (black hit black etc)
-					break
-				}
-				if (flag == no_capture) && (newtype != empty) {
-					//not suposed to capture and not empty square
-					break
-				}
-				if (flag == must_capture) && (newtype == empty) {
-					//must capture and got empty square
-					break
-				}
-				b[index] = ' '
-				if (y == 0 || y == 7) && (piece == 'P' || piece == 'p') {
-					//try all the pawn promotion possibilities
-					for _, promote_piece := range promote {
-						b[newindex] = promote_piece
-						yield <- copy_board(brd)
-					}
-				} else {
-					//generate this as a possible move
-					b[newindex] = piece
-					yield <- copy_board(brd)
-				}
-				b[index], b[newindex] = piece, newpiece
-				if (flag == may_capture) && (newtype != empty) {
-					//may capture and we did so !
-					break
+			} else {
+				if y == 6 {
+					length = 2
 				}
 			}
 		}
-		//close yield channel to break out of 'range' by user of generator
-		close(yield)
-	}()
-	return yield
+		for length > 0 {
+			x += dx
+			y += dy
+			length -= 1
+			if (x < 0) || (x >= 8) || (y < 0) || (y >= 8) {
+				//gone off the board
+				break
+			}
+			newindex := y*8 + x
+			newpiece := b[newindex]
+			newtype := piece_type[newpiece]
+			if newtype == ptype {
+				//hit one of our own piece type (black hit black etc)
+				break
+			}
+			if (flag == no_capture) && (newtype != empty) {
+				//not suposed to capture and not empty square
+				break
+			}
+			if (flag == must_capture) && (newtype == empty) {
+				//must capture and got empty square
+				break
+			}
+			b[index] = ' '
+			if (y == 0 || y == 7) && (piece == 'P' || piece == 'p') {
+				//try all the pawn promotion possibilities
+				for _, promote_piece := range promote {
+					b[newindex] = promote_piece
+					yield = append(yield, copy_board(brd))
+				}
+			} else {
+				//generate this as a possible move
+				b[newindex] = piece
+				yield = append(yield, copy_board(brd))
+			}
+			b[index], b[newindex] = piece, newpiece
+			if (flag == may_capture) && (newtype != empty) {
+				//may capture and we did so !
+				break
+			}
+		}
+	}
+	return &yield
 }
 
 //generate all first hit pieces from index position along given vectors
-func piece_scans(brd *board, index int, vectors vectors) <-chan byte {
-	yield := make(chan byte, 16)
-	go func() {
-		cx := index % 8
-		cy := index / 8
-		for _, vector := range vectors {
-			dx, dy, length := vector.dx, vector.dy, vector.length
-			x, y := cx, cy
-			for length > 0 {
-				x += dx
-				y += dy
-				length -= 1
-				if (0 <= x) && (x < 8) && (0 <= y) && (y < 8) {
-					//still on the board
-					b := *brd
-					piece := b[y*8+x]
-					if piece != ' ' {
-						//not empty square so yield piece
-						yield <- piece
-						break
-					}
+func piece_scans(brd *board, index int, vectors vectors) *[]byte {
+	yield := make([]byte, 0, len(queen_vectors))
+	cx := index % 8
+	cy := index / 8
+	for _, vector := range vectors {
+		dx, dy, length := vector.dx, vector.dy, vector.length
+		x, y := cx, cy
+		for length > 0 {
+			x += dx
+			y += dy
+			length -= 1
+			if (0 <= x) && (x < 8) && (0 <= y) && (y < 8) {
+				//still on the board
+				b := *brd
+				piece := b[y*8+x]
+				if piece != ' ' {
+					//not empty square so yield piece
+					yield = append(yield, piece)
+					break
 				}
 			}
 		}
-		//close yield channel to break out of 'range' by user of generator
-		close(yield)
-	}()
-	return yield
+	}
+	return &yield
 }
 
 //test if king of given colour is in check
@@ -378,8 +370,7 @@ func in_check(brd *board, colour, king_index int) (bool, int) {
 		king_index = bytes.IndexByte(b, king_piece)
 	}
 	for _, test := range tests {
-		piece_chan := piece_scans(brd, king_index, test.vectors)
-		for piece := range piece_chan {
+		for _, piece := range *piece_scans(brd, king_index, test.vectors) {
 			if bytes.IndexByte(test.pieces, piece) != -1 {
 				//yes we found one of the pieces along a clear vector from king
 				return true, king_index
@@ -399,9 +390,8 @@ func all_moves(brd *board, colour int) <-chan *board {
 		check := false
 		for index, piece := range *brd {
 			if piece_type[piece] == colour {
-				//one of our pieces ! so gather all boards from possible moves of this peice
-				board_yield := piece_moves(brd, index, moves_map[piece])
-				for new_brd := range board_yield {
+				//one of our pieces ! so gather all boards from possible moves of this piece
+				for _, new_brd := range *piece_moves(brd, index, moves_map[piece]) {
 					check, king_index = in_check(new_brd, colour, king_index)
 					if !check {
 						//on this board king is not in check
@@ -445,9 +435,8 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 	if ply <= 0 {
 		return evaluate(brd, colour)
 	}
-	board_yield := all_moves(copy_board(brd), colour)
 	mate := true
-	for new_board := range board_yield {
+	for new_board := range all_moves(copy_board(brd), colour) {
 		mate = false
 		alpha = max(alpha, -next_move(new_board, -colour, -beta, -alpha, ply-1))
 		if alpha >= beta {
@@ -475,8 +464,7 @@ func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
 func best_move(brd *board, colour int) *board {
 	//first ply of boards, sorted by score to help alpha/beta pruning
 	score_boards := make(score_boards, 0, max_chess_moves)
-	board_yield := all_moves(copy_board(brd), colour)
-	for brd := range board_yield {
+	for brd := range all_moves(copy_board(brd), colour) {
 		score := evaluate(brd, colour)
 		score_boards = insert_score_board(score_boards, brd, score)
 	}
@@ -538,13 +526,13 @@ func main() {
 			}
 			break
 		}
-		draw := 0
+		rep := 0
 		for i := 0; i < len(history); i++ {
 			if boards_equal(new_brd, history[i]) {
-				draw++
+				rep++
 			}
 		}
-		if draw >= 3 {
+		if rep >= 3 {
 			println("\n** Draw **")
 			break
 		}
