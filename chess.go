@@ -7,15 +7,17 @@ package main
 //package imports
 import (
 	"bytes"
+	"fmt"
 	"runtime"
+	"sort"
 	"time"
 )
 
 //control paramaters
 const (
 	max_chess_moves   = 218
-	max_ply           = 10
-	max_time_per_move = 10
+	max_ply           = 6
+	max_time_per_move = 6000
 )
 
 //piece values, in centipawns
@@ -52,6 +54,18 @@ type score_board struct {
 	brd   *board
 }
 type score_boards []score_board
+
+func (slice score_boards) Len() int {
+	return len(slice)
+}
+
+func (slice score_boards) Less(i, j int) bool {
+	return slice[i].score > slice[j].score
+}
+
+func (slice score_boards) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
 
 //description of a pieces movement and capture action
 type move struct {
@@ -241,26 +255,6 @@ func boards_equal(brd1, brd2 *board) bool {
 		}
 	}
 	return true
-}
-
-//append a score/board combination
-func append_score_board(boards score_boards, brd *board, score int) score_boards {
-	score_board := score_board{score, brd}
-	return append(boards, score_board)
-}
-
-//insert a score/board combination
-func insert_score_board(boards score_boards, brd *board, score int) score_boards {
-	for i := 0; i < len(boards); i++ {
-		if boards[i].score < score {
-			score_board := score_board{score, brd}
-			boards = append(boards, score_board)
-			copy(boards[i+1:], boards[i:])
-			boards[i] = score_board
-			return boards
-		}
-	}
-	return append_score_board(boards, brd, score)
 }
 
 //clear screen
@@ -459,7 +453,7 @@ func evaluate(brd *board, colour int) int {
 	return (white_score - black_score) * colour
 }
 
-//star time of move
+//start time of move
 var start_time time.Time
 
 //negamax alpha/beta pruning minmax search for given ply
@@ -494,23 +488,24 @@ func next_move(brd *board, colour, alpha, beta, ply int) int {
 
 //best move for given board position for given colour
 func best_move(brd *board, colour int, history *[]*board) *board {
-	//first ply of boards, sorted by score to help alpha/beta pruning
-	score_boards := make(score_boards, 0, max_chess_moves)
+	//first ply of boards
+	next_boards := make(score_boards, 0, max_chess_moves)
 	for brd := range all_moves(copy_board(brd), colour) {
-		score := evaluate(brd, colour)
-		score_boards = insert_score_board(score_boards, brd, score)
+		next_boards = append(next_boards, score_board{evaluate(brd, colour), brd})
 	}
-	if len(score_boards) == 0 {
+	if len(next_boards) == 0 {
 		return nil
 	}
+
 	//start move timer
 	start_time = time.Now()
-	best_board, best_ply_board := brd, brd
-	for ply := 1; ply < max_ply; ply++ {
+	best_board := brd
+	for ply := 1; ply <= max_ply; ply++ {
 		//iterative deepening of ply so we allways have a best move to go with if the timer expires
 		println("\nPly =", ply)
+		sort.Stable(next_boards)
 		alpha, beta := -mate_value*10, mate_value*10
-		for _, score_board := range score_boards {
+		for _, score_board := range next_boards {
 			hist := *history
 			rep := 0
 			for i := 0; i < len(hist); i++ {
@@ -518,28 +513,28 @@ func best_move(brd *board, colour int, history *[]*board) *board {
 					rep++
 				}
 			}
-			score := -next_move(score_board.brd, -colour, -beta, -alpha, ply-1) - (rep * queen_value)
+			score_board.score = -next_move(score_board.brd, -colour, -beta, -alpha, ply-1) - (rep * queen_value)
 			if time.Since(start_time).Seconds() > max_time_per_move {
 				//move timer expired
 				return best_board
 			}
-			if score > alpha {
+			if score_board.score > alpha {
 				//got a better board than last best
-				alpha, best_ply_board = score, score_board.brd
+				best_board, alpha = score_board.brd, score_board.score
 				print("*")
 			} else {
 				//just tick off another board
 				print(".")
 			}
 		}
-		best_board = best_ply_board
 	}
 	return best_board
 }
 
 //setup first board, loop for white..black..white..black...
 func main() {
-	runtime.GOMAXPROCS(8)
+	game_start_time := time.Now()
+	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	slp, _ := time.ParseDuration("0.1s")
 	b := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
 	//b := board("rnb kbnrpppppppp                                PPPPPPPPRNBQKBNR")
@@ -553,6 +548,7 @@ func main() {
 	colour := white
 	display_board(brd)
 	for {
+		fmt.Print("Elapsed Time: ", time.Since(game_start_time).Seconds())
 		if colour == white {
 			println("\nWhite to move:")
 		} else {
