@@ -446,7 +446,7 @@ func evaluate(brd *board, colour int) int {
 		if ptype != empty {
 			//add score for position on the board, near center, clear lines etc
 			if ptype == black {
-				black_score += piece_positions[piece][63 - index]
+				black_score += piece_positions[piece][63-index]
 			} else {
 				white_score += piece_positions[piece][index]
 			}
@@ -463,7 +463,7 @@ func evaluate(brd *board, colour int) int {
 var start_time time.Time
 
 //negamax alpha/beta pruning minmax search for given ply
-func next_move(brd *board, colour int, alpha int, beta int, ply int) int {
+func next_move(brd *board, colour, alpha, beta, ply int) int {
 	if ply <= 0 {
 		return evaluate(brd, colour)
 	}
