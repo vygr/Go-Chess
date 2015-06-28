@@ -476,6 +476,10 @@ func score(brd *board, colour, alpha, beta, ply int) int {
 			value = -score(new_board, -colour, -beta, -alpha, ply-1)
 		}
 		mate = false
+		if value >= mate_value {
+			//early return if mate
+			return value
+		}
 		if value >= beta {
 			//fail hard beta cutoff
 			return beta
@@ -547,6 +551,10 @@ func best_move(brd *board, colour int, history *[]*board) *board {
 			copy(next_boards[1:], next_boards[0:best_index])
 			next_boards[0] = score_board
 		}
+		if alpha >= mate_value {
+			//don't look further ahead if we allready can force mate
+			break
+		}
 	}
 	return next_boards[0].brd
 }
@@ -563,7 +571,7 @@ func main() {
 	//b := board(" k                           P     Q P  K                       ")
 	//b := board("        p         k    p   rb         p      r              K   ")
 	//b := board("        p         k    p   r          p      r              K   ")
-	//b := board("                   k                         Q              K   ")
+	//b := board("                   k               K         Q                  ")
 	//b := board("    k     R        K                                            ")
 	brd := &b
 	history := make([]*board, 0)
