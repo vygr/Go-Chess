@@ -521,10 +521,10 @@ func best_move(brd *board, colour int, history *[]*board) *board {
 
 	//start move timer
 	start_time = time.Now()
-	best_index, best_ply_index := 0, 0
 	for ply := 1; ply <= max_ply; ply++ {
 		//iterative deepening of ply so we allways have a best move to go with if the timer expires
 		println("\nPly =", ply)
+		best_index := 0
 		alpha, beta := -mate_value*10, mate_value*10
 		for index, score_board := range next_boards {
 			score_board.score = -score(score_board.brd, -colour, -beta, -alpha, ply) + score_board.bias
@@ -538,19 +538,17 @@ func best_move(brd *board, colour int, history *[]*board) *board {
 			}
 			if time.Since(start_time).Seconds() > max_time_per_move {
 				//move timer expired
-				return next_boards[best_ply_index].brd
+				return next_boards[0].brd
 			}
 		}
-		best_ply_index = best_index
-		//if best_index != 0 {
-		//	//promote board to PV
-		//	score_board := next_boards[best_index]
-		//	copy(next_boards[1:], next_boards[0:best_index])
-		//	next_boards[0] = score_board
-		//	best_ply_index = 0
-		//}
+		if best_index != 0 {
+			//promote board to PV
+			score_board := next_boards[best_index]
+			copy(next_boards[1:], next_boards[0:best_index])
+			next_boards[0] = score_board
+		}
 	}
-	return next_boards[best_ply_index].brd
+	return next_boards[0].brd
 }
 
 //setup first board, loop for white..black..white..black...
@@ -565,6 +563,8 @@ func main() {
 	//b := board(" k                           P     Q P  K                       ")
 	//b := board("        p         k    p   rb         p      r              K   ")
 	//b := board("        p         k    p   r          p      r              K   ")
+	//b := board("                   k                         Q              K   ")
+	//b := board("    k     R        K                                            ")
 	brd := &b
 	history := make([]*board, 0)
 	colour := white
