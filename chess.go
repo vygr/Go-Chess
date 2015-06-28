@@ -16,8 +16,8 @@ import (
 //control paramaters
 const (
 	max_chess_moves   = 218
-	max_ply           = 5
-	max_time_per_move = 1000
+	max_ply           = 10
+	max_time_per_move = 10
 )
 
 //piece values, in centipawns
@@ -51,6 +51,7 @@ type board []byte
 //evaluation score and board combination
 type score_board struct {
 	score int
+	bias  int
 	brd   *board
 }
 type score_boards []score_board
@@ -456,7 +457,7 @@ func evaluate(brd *board, colour int) int {
 //start time of move
 var start_time time.Time
 
-//negascout alpha/beta pruning minmax search for given ply
+//pvs alpha/beta pruning minmax search for given ply
 func score(brd *board, colour, alpha, beta, ply int) int {
 	if ply == 0 {
 		return evaluate(brd, colour)
@@ -468,17 +469,19 @@ func score(brd *board, colour, alpha, beta, ply int) int {
 			//not first child so null search window
 			value = -score(new_board, -colour, -alpha-1, -alpha, ply-1)
 			if alpha < value && value < beta {
-				//failed hig, so full re-search
-				value = -score(new_board, -colour, -beta, -value, ply-1)
+				//failed high, so full re-search
+				value = -score(new_board, -colour, -beta, -alpha, ply-1)
 			}
 		} else {
 			value = -score(new_board, -colour, -beta, -alpha, ply-1)
 		}
 		mate = false
-		alpha = max(alpha, value)
-		if alpha >= beta {
-			//opponent would not allow this branch, so we can't get here, so back out
-			break
+		if value >= beta {
+			//fail hard beta cutoff
+			return beta
+		}
+		if value > alpha {
+			alpha = value
 		}
 		if time.Since(start_time).Seconds() > max_time_per_move {
 			//time has expired for this move
@@ -500,9 +503,16 @@ func score(brd *board, colour, alpha, beta, ply int) int {
 //best move for given board position for given colour
 func best_move(brd *board, colour int, history *[]*board) *board {
 	//first ply of boards
+	hist := *history
 	next_boards := make(score_boards, 0, max_chess_moves)
 	for brd := range all_moves(copy_board(brd), colour) {
-		next_boards = append(next_boards, score_board{evaluate(brd, colour), brd})
+		rep := 0
+		for i := 0; i < len(hist); i++ {
+			if boards_equal(brd, hist[i]) {
+				rep++
+			}
+		}
+		next_boards = append(next_boards, score_board{evaluate(brd, colour), -(rep * queen_value), brd})
 	}
 	if len(next_boards) == 0 {
 		return nil
@@ -511,36 +521,36 @@ func best_move(brd *board, colour int, history *[]*board) *board {
 
 	//start move timer
 	start_time = time.Now()
-	best_board, best_ply_board := brd, brd
+	best_index, best_ply_index := 0, 0
 	for ply := 1; ply <= max_ply; ply++ {
 		//iterative deepening of ply so we allways have a best move to go with if the timer expires
 		println("\nPly =", ply)
 		alpha, beta := -mate_value*10, mate_value*10
-		for _, score_board := range next_boards {
-			hist := *history
-			rep := 0
-			for i := 0; i < len(hist); i++ {
-				if boards_equal(score_board.brd, hist[i]) {
-					rep++
-				}
-			}
-			score_board.score = -score(score_board.brd, -colour, -beta, -alpha, ply) - (rep * queen_value)
-			if time.Since(start_time).Seconds() > max_time_per_move {
-				//move timer expired
-				return best_ply_board
-			}
+		for index, score_board := range next_boards {
+			score_board.score = -score(score_board.brd, -colour, -beta, -alpha, ply) + score_board.bias
 			if score_board.score > alpha {
 				//got a better board than last best
-				best_board, alpha = score_board.brd, score_board.score
+				best_index, alpha = index, score_board.score
 				print("*")
 			} else {
 				//just tick off another board
 				print(".")
 			}
+			if time.Since(start_time).Seconds() > max_time_per_move {
+				//move timer expired
+				return next_boards[best_ply_index].brd
+			}
 		}
-		best_ply_board = best_board
+		best_ply_index = best_index
+		//if best_index != 0 {
+		//	//promote board to PV
+		//	score_board := next_boards[best_index]
+		//	copy(next_boards[1:], next_boards[0:best_index])
+		//	next_boards[0] = score_board
+		//	best_ply_index = 0
+		//}
 	}
-	return best_ply_board
+	return next_boards[best_ply_index].brd
 }
 
 //setup first board, loop for white..black..white..black...
