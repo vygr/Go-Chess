@@ -16,8 +16,8 @@ import (
 //control paramaters
 const (
 	max_chess_moves   = 218
-	max_ply           = 10
-	max_time_per_move = 10
+	max_ply           = 5
+	max_time_per_move = 1000
 )
 
 //piece values, in centipawns
@@ -456,15 +456,26 @@ func evaluate(brd *board, colour int) int {
 //start time of move
 var start_time time.Time
 
-//negamax alpha/beta pruning minmax search for given ply
+//negascout alpha/beta pruning minmax search for given ply
 func score(brd *board, colour, alpha, beta, ply int) int {
 	if ply == 0 {
 		return evaluate(brd, colour)
 	}
 	mate := true
 	for new_board := range all_moves(copy_board(brd), colour) {
+		var value int
+		if mate == false {
+			//not first child so null search window
+			value = -score(new_board, -colour, -alpha-1, -alpha, ply-1)
+			if alpha < value && value < beta {
+				//failed hig, so full re-search
+				value = -score(new_board, -colour, -beta, -value, ply-1)
+			}
+		} else {
+			value = -score(new_board, -colour, -beta, -alpha, ply-1)
+		}
 		mate = false
-		alpha = max(alpha, -score(new_board, -colour, -beta, -alpha, ply-1))
+		alpha = max(alpha, value)
 		if alpha >= beta {
 			//opponent would not allow this branch, so we can't get here, so back out
 			break
@@ -537,13 +548,13 @@ func main() {
 	game_start_time := time.Now()
 	runtime.GOMAXPROCS(runtime.NumCPU() * 2)
 	slp, _ := time.ParseDuration("0.1s")
-	//b := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
+	b := board("rnbqkbnrpppppppp                                PPPPPPPPRNBQKBNR")
 	//b := board("rnb kbnrpppppppp                                PPPPPPPPRNBQKBNR")
 	//b := board("   r   kpB    pp  p  p    r p             PRRP  P P  P P  K     ")
 	//b := board(" k                         Q P     Q P  K                       ")
 	//b := board(" k                           P     Q P  K                       ")
 	//b := board("        p         k    p   rb         p      r              K   ")
-	b := board("        p         k    p   r          p      r              K   ")
+	//b := board("        p         k    p   r          p      r              K   ")
 	brd := &b
 	history := make([]*board, 0)
 	colour := white
